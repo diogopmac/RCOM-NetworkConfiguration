@@ -1,6 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -Werror -pedantic
-BIN = bin
+ROOT = ..
+BIN = $(ROOT)/bin
 
 all: download
 
