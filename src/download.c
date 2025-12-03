@@ -96,6 +96,15 @@ int decode_rfc1738(char *ftp_link){
 }
 
 int main(int argc, char **argv){
-    decode_rfc1738(argv[1]);
+    if (argc < 2){
+        printf("Usage: %s <ftp_url>\n", argv[0]);
+        return -1;
+    }
+
+    if (decode_rfc1738(argv[1]) != 0){
+        printf("Couldn't parse URL.");
+        return -1;
+    }
+
     return 0;
 }
