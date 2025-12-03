@@ -18,29 +18,24 @@ int decode_rfc1738(char *ftp_link){
     }
 
     char *schema = strtok(ftp_link, ":");
-
-    printf("Schema: %s\n", schema);
     if (schema == NULL) {
         printf("No schema provided.\n");
         return -1;
     }
     if(strcmp(schema, "ftp")) {
-        printf("Wrong protocol selected.\nCorrect link format: ftp://[<user>:<password>@]<host>/<url-path>");
+        printf("Wrong protocol selected.\nCorrect link format: ftp://[<user>:<password>@]<host>/<url-path>\n");
         return -1;
     }
 
     char *url = strtok(NULL, " ");
     if (url[0] != '/' || url[1] != '/'){
-        printf("Wrong URL format.\nCorrect link format: ftp://[<user>:<password>@]<host>/<url-path>");
+        printf("Wrong URL format.\nCorrect link format: ftp://[<user>:<password>@]<host>/<url-path>\n");
         return -1;
     }
     url = url+2;
 
-    printf("URL: %s\n", url);
-
     char *at = strchr(url, '@');
     char *start;
-
     if (at) {
         char *div = strchr(url, ':');
 
@@ -65,9 +60,16 @@ int decode_rfc1738(char *ftp_link){
         start = url;
     }
 
+    if (strchr(start, ':')){
+        printf("Bad URL.\n");
+        return -1;
+    }
+
     char *first_slash = strchr(start, '/');
     char *end = strchr(start, '\0');
-    if (first_slash){
+    if (first_slash && 
+        (first_slash-start > 0) 
+    ){
         strncpy(domain, start, first_slash-start);
         strncpy(path, first_slash+1, end-first_slash);
 
