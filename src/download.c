@@ -20,7 +20,10 @@ int decode_rfc1738(char *ftp_link){
     char *schema = strtok(ftp_link, ":");
 
     printf("Schema: %s\n", schema);
-
+    if (schema == NULL) {
+        printf("No schema provided.\n");
+        return -1;
+    }
     if(strcmp(schema, "ftp")) {
         printf("Wrong protocol selected.\nCorrect link format: ftp://[<user>:<password>@]<host>/<url-path>");
         return -1;
@@ -41,36 +44,45 @@ int decode_rfc1738(char *ftp_link){
     if (at) {
         char *div = strchr(url, ':');
 
-        // username:passoword@url
-        if (div){
+        if (div) { // username:passoword@url
             strncpy(username, url, div-url);
             strncpy(password, div+1, at-div-1);
 
             username[div-url] = '\0';
             password[at-div-1] = '\0';
         }
-        // username@url
-        else {
+        else { // username@url
             strncpy(username, url, at-url);
             strcpy(password, "annonymous");
         }
 
         start = at +1;
     }
-    // url
-    else {
+    else { // url
         strcpy(username, "annonymous");
         strcpy(password, "annonymous");
 
         start = url;
     }
 
-    printf("%s\n", start);
+    char *first_slash = strchr(start, '/');
+    char *end = strchr(start, '\0');
+    if (first_slash){
+        strncpy(domain, start, first_slash-start);
+        strncpy(path, first_slash+1, end-first_slash);
+
+        domain[first_slash-start] = '\0';
+        path[end-first_slash] = '\0';
+    }
+    else {
+        printf("Bad URL\n");
+        return -1;
+    }
 
     printf("Username: %s\n", username);
     printf("Password: %s\n", password);
-    
-
+    printf("Domain: %s\n", domain);
+    printf("Path: %s\n", path);
 
     return 0;
 }
