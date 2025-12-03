@@ -13,7 +13,7 @@ char path[MAX_LEN];
 
 int decode_rfc1738(char *ftp_link){
     if(strlen(ftp_link) > MAX_LEN){
-        printf("URL maximum size exceeded");
+        printf("URL maximum size exceeded\n");
         return -1;
     }
 
@@ -28,6 +28,10 @@ int decode_rfc1738(char *ftp_link){
     }
 
     char *url = strtok(NULL, " ");
+    if(url == NULL){
+        printf("No URL provided\n");
+        return -1;
+    }
     if (url[0] != '/' || url[1] != '/'){
         printf("Wrong URL format.\nCorrect link format: ftp://[<user>:<password>@]<host>/<url-path>\n");
         return -1;
@@ -39,7 +43,7 @@ int decode_rfc1738(char *ftp_link){
     if (at) {
         char *div = strchr(url, ':');
 
-        if (div) { // username:passoword@url
+        if (div) { // username:password@url
             strncpy(username, url, div-url);
             strncpy(password, div+1, at-div-1);
 
@@ -48,14 +52,16 @@ int decode_rfc1738(char *ftp_link){
         }
         else { // username@url
             strncpy(username, url, at-url);
-            strcpy(password, "annonymous");
+            strcpy(password, "anonymous");
+
+            username[at-url] = '\0';
         }
 
         start = at +1;
     }
     else { // url
-        strcpy(username, "annonymous");
-        strcpy(password, "annonymous");
+        strcpy(username, "anonymous");
+        strcpy(password, "anonymous");
 
         start = url;
     }
