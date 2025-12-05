@@ -2,6 +2,7 @@
 
 ![exp1](../img/exp1.png)
 
+## Steps
 1. Connect E1 of tuxY3 and E1 of tuxY4 to the switch
 2. Configure if_e1 interface of tuxY3 and if_e1 interface of tuxY4 using ifconfig
 3. Write down the IP and MAC addresses of the network interfaces
