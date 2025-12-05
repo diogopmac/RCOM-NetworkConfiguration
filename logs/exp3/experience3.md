@@ -55,10 +55,16 @@ tux 4 $ `sudo sysctl net.ipv4.ip_forward=1`
 Disable ICMP echo-ignore-broadcasts
 tux 4 $ `sudo sysctl net.ipv4.icmp_echo_ignore_broadcasts=0`
 
-## Tux3
-Add routes to Tux2
-tux3 $ `sudo route add -net 172.16.101.1/24 gw 172.16.100.254`
-
 ## Tux2
 Add routes to Tux2
 tux2 $ `sudo route add -net 172.16.100.1/24 gw 172.16.101.253`
+
+![routes2](log/routes_tux2.png)
+
+## Tux3
+Add routes to Tux2
+tux3 $ `sudo route add -net 172.16.101.1/24 gw 172.16.100.254`
+![routes3](log/routes_tux3.png)
+
+## Tux4
+![routes4](log/routes_tux4.png)
