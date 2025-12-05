@@ -63,3 +63,8 @@ tux4 $ `sudo ifconfig if_e1 172.16.110.254/24`
 > MikroTik $ `/interface bridge add bridge=bridge110 interface=ether9`
 > ### Add tux4 to bridge111
 > MikroTik $ `/interface bridge add bridge=bridge111 interface=ether10`
+
+# Questions
+### How to configure bridgeY0?
+
+### How many broadcast domains are there? How can you conclude it from the logs?
