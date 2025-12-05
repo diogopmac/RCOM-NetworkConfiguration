@@ -25,7 +25,7 @@
 >
 > Remove a port from a bridge: `/inteface bridge port remove [find interface=etherN]` - Where N is the physical port where each tux is connected.
 >
-> Add a port to a bridge: `/interface bridge print where bridge=bridgeName`
+> Add a port to a bridge: `/interface bridge port add bridge=bridgeName interface=etherN`
 
 ## Switch
 > Conect tux2 e1 to `ether8`
@@ -58,11 +58,11 @@ tux4 $ `sudo ifconfig if_e1 172.16.110.254/24`
 > MikroTik $ `/interface bridge port remove [find interface=ether10]`
 >
 > ### Add tux2 and tux3 to bridge110
-> MikroTik $ `/interface bridge add bridge=bridge110 interface=ether9`
+> MikroTik $ `/interface bridge port add bridge=bridge110 interface=ether9`
 >
-> MikroTik $ `/interface bridge add bridge=bridge110 interface=ether10`
+> MikroTik $ `/interface bridge port add bridge=bridge110 interface=ether10`
 > ### Add tux4 to bridge111
-> MikroTik $ `/interface bridge add bridge=bridge111 interface=ether8`
+> MikroTik $ `/interface bridge port add bridge=bridge111 interface=ether8`
 
 # Questions
 ### How to configure bridgeY0?
