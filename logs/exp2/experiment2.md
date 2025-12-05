@@ -15,7 +15,7 @@
 10. Repeat steps 7, 8 and 9, but now do
     - ping broadcast in tuxY2 (ping -b 172.16.Y1.255)
 
-# Solution (Table 11)
+# Solution (Table 10)
 > ### Useful commands (on MikroTik terminal):
 > View current bridges: `/interface bridge print`
 >
@@ -34,15 +34,21 @@
 >
 > Conect tux4 e1 to `ether10`
 ## Tux2:
-tux2 $ `sudo ifconfig if_e1 172.16.111.1/24`
-> IP: `172.16.111.1/24`
+tux2 $ `sudo ifconfig if_e1 172.16.101.1/24`
+> IP: `172.16.101.1/24`
 > 
-> MAC: `ec:75:0c:c2:17:51`
+> MAC: `ec:75:0c:c2:17:8b`
 ## Tux 3
-tux3 $ `sudo ifconfig if_e1 172.16.110.1/24`
+tux3 $ `sudo ifconfig if_e1 172.16.100.1/24`
+> IP: `172.16.100.1`
+> 
+> MAC: `ec:75:0c:c2:3c:f5`
 
 ## Tux 4
-tux4 $ `sudo ifconfig if_e1 172.16.110.254/24`
+tux4 $ `sudo ifconfig if_e1 172.16.100.254/24`
+> IP: `172.16.100.254`
+> 
+> MAC: `ec:75:0c:c2:51:4d`
 
 ## Tux2 (MikroTik terminal):
 > ### Add the bridges
