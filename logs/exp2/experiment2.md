@@ -48,7 +48,7 @@ tux4 $ `sudo ifconfig if_e1 172.16.110.254/24`
 > ### Add the bridges
 > MikroTik $ `/interface bridge add name=bridge110`
 > 
-> MikroTik $ `/interface bridge add name=bridge110`
+> MikroTik $ `/interface bridge add name=bridge111`
 >
 > ### Remove all the ports from the default bridges
 > MikroTik $ `/interface bridge port remove [find interface=ether8]`
@@ -58,11 +58,11 @@ tux4 $ `sudo ifconfig if_e1 172.16.110.254/24`
 > MikroTik $ `/interface bridge port remove [find interface=ether10]`
 >
 > ### Add tux2 and tux3 to bridge110
-> MikroTik $ `/interface bridge add bridge=bridge110 interface=ether8`
->
 > MikroTik $ `/interface bridge add bridge=bridge110 interface=ether9`
+>
+> MikroTik $ `/interface bridge add bridge=bridge110 interface=ether10`
 > ### Add tux4 to bridge111
-> MikroTik $ `/interface bridge add bridge=bridge111 interface=ether10`
+> MikroTik $ `/interface bridge add bridge=bridge111 interface=ether8`
 
 # Questions
 ### How to configure bridgeY0?
