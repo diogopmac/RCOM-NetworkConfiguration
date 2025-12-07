@@ -119,3 +119,24 @@ Add routes to tux3
 >
 > Ping the Router
 > tux3 $ `sudo ping 172.16.111.254`
+>
+> Ping the Internet
+> tux3 $ `sudo ping 172.16.1.111`
+>
+> All should have connection
+
+## Redirect Host
+### Tux 2
+> tux2 $ `sudo sysctl net.ipv4.conf.if_e1.accept_redirects=0`
+>
+> tux2 $ `sysctl net.ipv4.conf.all.accept_redirects=0`
+>
+> Disable the route from Tux2 to Tux3 gateway Tux4
+> tux2 $ `sudo route del -net 172.16.110.0/24 gw 172.16.111.253`
+>
+> Add the route from Tux2 to Tux3 gateway RC
+> tux2 $ `sudo route add -net 172.16.110.0/24 gw 172.16.111.254`
+>
+> Ping Tux3 from Tux2 (should receive a lot of Redirect Host messages)
+> tux2 $ `sudo ping 172.16.110.1`
+
