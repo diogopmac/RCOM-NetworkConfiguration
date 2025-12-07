@@ -127,16 +127,49 @@ Add routes to tux3
 
 ## Redirect Host
 ### Tux 2
+### Redirect ping from Tux2 to Tux3, via RC instead of Tux4
 > tux2 $ `sudo sysctl net.ipv4.conf.if_e1.accept_redirects=0`
 >
 > tux2 $ `sysctl net.ipv4.conf.all.accept_redirects=0`
 >
 > Disable the route from Tux2 to Tux3 gateway Tux4
+> 
 > tux2 $ `sudo route del -net 172.16.110.0/24 gw 172.16.111.253`
 >
 > Add the route from Tux2 to Tux3 gateway RC
+> 
 > tux2 $ `sudo route add -net 172.16.110.0/24 gw 172.16.111.254`
 >
 > Ping Tux3 from Tux2 (should receive a lot of Redirect Host messages)
+> 
 > tux2 $ `sudo ping 172.16.110.1`
+>
+> Traceroute Tux3 (should have 3 lines)
+> 
+> tux2 $ `sudo traceroute 172.16.110.1`
 
+### Revert the changes 
+> tux2 $ `sudo route del -net 172.16.110.0/24 gw 172.16.111.254`
+> 
+> tux2 $ `sudo route add -net 172.16.110.0/24 gw 172.16.111.253`
+>
+> Traceroute Tux3 (should have 2 lines)
+>
+> tux2 $ `sudo traceroute 172.16.110.1`
+
+### Redirect again (but now with conf accept_redirects=1
+> tux2 $ `sudo route del -net 172.16.110.0/24 gw 172.16.111.254`
+> 
+> tux2 $ `sudo route add -net 172.16.110.0/24 gw 172.16.111.253`
+>
+> tux2 $ `sudo sysctl net.ipv4.conf.if_e1.accept_redirects=0`
+>
+> tux2 $ `sysctl net.ipv4.conf.all.accept_redirects=0`
+>
+> Ping Tux3 from Tux2 (should receive one Redirect Host message)
+> 
+> tux2 $ `sudo ping 172.16.110.1`
+>
+> Traceroute Tux3 (should have 2 lines)
+> 
+> tux2 $ `sudo traceroute 172.16.110.1`
