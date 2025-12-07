@@ -173,3 +173,33 @@ Add routes to tux3
 > Traceroute Tux3 (should have 2 lines)
 > 
 > tux2 $ `sudo traceroute 172.16.110.1`
+> 
+
+## Ping the internet + NAT
+### Tux 3
+> Ping the FTP server (should work)
+>
+> tux3 $ `sudo ping 172.16.1.10`
+
+### Router Console
+> Disable NAT
+>
+> MikroTik $ `/ip firewall nat disable 0`
+
+### Tux 3
+> Ping the FTP server (should not work)
+>
+> tux3 $ `sudo ping 172.16.1.10`
+
+### Router Console
+> Enable NAT
+>
+> MikroTik $ `/ip firewall nat disable 0`
+
+# Questions 
+### How to configure a static route in a commercial router?
+### What are the paths followed by the packets, with and without ICMP redirect
+enabled, in the experiments carried out and why?
+### How to configure NAT in a commercial router?
+### What does NAT do?
+### What happens when tuxY3 pings the FTP server with the NAT disabled? Why?
