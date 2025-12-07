@@ -74,14 +74,15 @@ Enable IP Forwarding
 Disable ICMP echo-ignore-broadcasts
 > tux 4 $ `sudo sysctl net.ipv4.icmp_echo_ignore_broadcasts=0`
 
-### Switch
+### Switch Console
 > MikroTik $ `/interface bridge port remove [find interface=ether12]`
 >
 > MikroTik $ `/interface bridge port add bridge=bridge111 interface=ether12`
+
+### Router Console
+> MikroTik $ `/ip address add address=172.16.1.110/24 interface=ether1`
 >
-> MikroTik $ `/ip address add address=172.16.1.110/24`
->
-> MikroTik $ `/ip address add address=172.16.111.254/24` 
+> MikroTik $ `/ip address add address=172.16.111.254/24 interface=ether2` 
 
 ## Routing
 ### Tux 3
