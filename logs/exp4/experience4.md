@@ -51,22 +51,22 @@ what happens
 tux2 $ `sudo ifconfig if_e1 172.16.111.1/24`
 > IP: `172.16.111.1/24`
 > 
-> MAC: `ec:75:0c:c2:17:8b` (confirmar depois)
+> MAC: `ec:75:0c:c2:17:51`
 ### Tux3
 tux3 $ `sudo ifconfig if_e1 172.16.110.1/24`
 > IP: `172.16.110.1`
 > 
-> MAC: `ec:75:0c:c2:3c:f5` (confirmar depois)
+> MAC: `ec:75:0c:c2:3c:7b`
 ### Tux4
 tux4 $ `sudo ifconfig if_e1 172.16.110.254/24`
 > IP e1: `172.16.110.254`
 >
-> MAC e1: `ec:75:0c:c2:51:4d`
+> MAC e1: `ec:75:0c:c2:3c:96`
 
 tux4 $ `sudo ifconfig if_e2 172.16.111.253/24`
 > IP e2: `172.16.111.253`
 > 
-> MAC e2: `ec:75:0c:c2:17:2a` (confirmar depois)
+> MAC e2: `ec:75:0c:c2:2d:dc`
 
 Enable IP Forwarding
 > tux 4 $ `sudo sysctl net.ipv4.ip_forward=1`
