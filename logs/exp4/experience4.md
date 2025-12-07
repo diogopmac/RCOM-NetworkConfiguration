@@ -105,7 +105,7 @@ Add routes to the Internet via Router
 
 ### Router
 Add routes to tux3
-> MikroTik $ `/ip router add dst-address=172.16.110.0/24 gateway=172.16.111.253`
+> MikroTik $ `/ip route add dst-address=172.16.110.0/24 gateway=172.16.111.253`
 
 ### Checking routes
 #### Tux 3
