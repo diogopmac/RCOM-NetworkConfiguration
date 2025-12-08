@@ -1,5 +1,13 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
 
 #define FTP_PORT 21
 #define MAX_LEN 1024
@@ -76,8 +84,8 @@ int decode_rfc1738(char *ftp_link, Url *ftp_url){
     char *first_slash = strchr(start, '/');
     char *end = strchr(start, '\0');
     if (first_slash && 
-        (first_slash-start > 0) 
-    ){
+        (first_slash-start > 0) )
+    {
         strncpy(ftp_url->domain, start, first_slash-start);
         strncpy(ftp_url->path, first_slash+1, end-first_slash);
 
@@ -88,11 +96,6 @@ int decode_rfc1738(char *ftp_link, Url *ftp_url){
         printf("Bad URL\n");
         return -1;
     }
-
-    printf("Username: %s\n", ftp_url->username);
-    printf("Password: %s\n", ftp_url->password);
-    printf("Domain: %s\n", ftp_url->domain);
-    printf("Path: %s\n", ftp_url->path);
 
     return 0;
 }
@@ -106,9 +109,23 @@ int main(int argc, char **argv){
     Url url;
 
     if (decode_rfc1738(argv[1], &url) != 0){
-        printf("Couldn't parse URL.");
+        printf("ERROR: Couldn't parse URL.");
         return -1;
     }
+
+    printf("Username : %s\n", url.username);
+    printf("Password : %s\n", url.password);
+    printf("Domain   : %s\n", url.domain);
+    printf("Path     : %s\n", url.path);
+
+    struct hostent *host = gethostbyname(url.domain);
+    if (host == NULL){
+        printf("ERROR: Host could not be found.");
+        return -1;
+    }
+
+    printf("Host name  : %s\n", host->h_name);
+    printf("IP Address : %s\n", inet_ntoa(*((struct in_addr *) host->h_addr)));
 
     return 0;
 }
