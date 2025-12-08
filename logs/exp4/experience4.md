@@ -157,7 +157,7 @@ Add routes to tux3
 >
 > tux2 $ `sudo traceroute 172.16.110.1`
 
-### Redirect again (but now with conf accept_redirects=1
+### Redirect again (but now with conf accept_redirects=1)
 > tux2 $ `sudo route del -net 172.16.110.0/24 gw 172.16.111.254`
 > 
 > tux2 $ `sudo route add -net 172.16.110.0/24 gw 172.16.111.253`
@@ -198,8 +198,7 @@ Add routes to tux3
 
 # Questions 
 ### How to configure a static route in a commercial router?
-### What are the paths followed by the packets, with and without ICMP redirect
-enabled, in the experiments carried out and why?
+### What are the paths followed by the packets, with and without ICMP redirect enabled, in the experiments carried out and why?
 ### How to configure NAT in a commercial router?
 ### What does NAT do?
 ### What happens when tuxY3 pings the FTP server with the NAT disabled? Why?
