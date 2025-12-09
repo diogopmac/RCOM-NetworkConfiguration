@@ -20,7 +20,6 @@ typedef struct {
 } Url;
 
 // ftp://[<user>:<password>@]<host>/<url-path>
-
 int decode_rfc1738(char *ftp_link, Url *ftp_url){
     if(strlen(ftp_link) > MAX_LEN){
         printf("URL maximum size exceeded\n");
@@ -123,6 +122,57 @@ int socket_fd(const char *address, uint16_t port){
     return socket_fd;
 }
 
+int message(int socket_fd, char *code){
+    char c;
+    char line[MAX_LEN];
+    int code_index = 0;
+    int line_index = 0;
+    int state = 0; // 0 code, 1 content, 2 final
+    
+    while (1) {
+        read(socket_fd, &c, 1);
+
+        switch(state){
+            case 0:
+                if (c == '-'){
+                    line[line_index++] = c;
+                    state = 1;
+                }
+                else if (c == ' '){
+                    line[line_index++] = c;
+                    state = 2;
+                }
+                else code[code_index++] = c;
+                break;
+            case 1:
+                if (c == '\n'){
+                    printf("%s%s\n", code, line);
+
+                    memset(line, 0, sizeof(line));
+                    memset(code, 0, MAX_LEN);
+
+                    code_index = 0;
+                    line_index = 0;
+
+                    state = 0;
+                    break;
+                }
+                else {
+                    line[line_index++] = c;
+                    break;
+                }
+            case 2:
+                if (c == '\n'){
+                    printf("%s%s\n", code, line);
+                    memset(line, 0, sizeof line);
+                    return 0;
+                }
+                break;
+        }
+    }
+    return -1;
+}
+
 int main(int argc, char **argv){
     if (argc < 2){
         printf("Usage: %s <ftp_url>\n", argv[0]);
@@ -154,9 +204,16 @@ int main(int argc, char **argv){
 
     int socket;
     printf("Connecting to %s\n", ip_address);
-    socket = socket_fd(ip_address, FTP_PORT);
 
-    printf("Socket File descriptor: %u\n", socket);
+    socket = socket_fd(ip_address, FTP_PORT);
+    printf("Socket File descriptor: %u\nAttempting Connection...\n\n", socket);
+
+    char code[MAX_LEN];
+    if (message(socket, code) != 0){
+        printf("Unable to connect to %s", ip_address);
+        return -1;
+    }
+    else printf("\nConnection Successful. Starting Authentication.\n");
 
     return 0;
 }
