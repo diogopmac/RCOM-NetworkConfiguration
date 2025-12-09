@@ -100,6 +100,29 @@ int decode_rfc1738(char *ftp_link, Url *ftp_url){
     return 0;
 }
 
+int socket_fd(const char *address, uint16_t port){
+    int socket_fd = -1;
+    struct sockaddr_in server_addr;
+
+    bzero((char *) &server_addr, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = inet_addr(address); 
+    server_addr.sin_port = htons(port);      
+
+    if ((socket_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        perror("socket()");
+        exit(-1);
+    }
+    
+    if (connect(socket_fd, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
+        perror("connect()");
+        exit(-1);
+    }
+
+    printf("Connected to %s:%d\n", address, port);
+    return socket_fd;
+}
+
 int main(int argc, char **argv){
     if (argc < 2){
         printf("Usage: %s <ftp_url>\n", argv[0]);
@@ -124,8 +147,16 @@ int main(int argc, char **argv){
         return -1;
     }
 
+    const char *ip_address = inet_ntoa(*((struct in_addr *) host->h_addr));
+
     printf("Host name  : %s\n", host->h_name);
-    printf("IP Address : %s\n", inet_ntoa(*((struct in_addr *) host->h_addr)));
+    printf("IP Address : %s\n", ip_address);
+
+    int socket;
+    printf("Connecting to %s\n", ip_address);
+    socket = socket_fd(ip_address, FTP_PORT);
+
+    printf("Socket File descriptor: %u\n", socket);
 
     return 0;
 }
