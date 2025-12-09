@@ -125,6 +125,7 @@ int socket_fd(const char *address, uint16_t port){
 int message(int socket_fd, char *code){
     char c;
     char line[MAX_LEN];
+    memset(line, 0, sizeof(line));
     int code_index = 0;
     int line_index = 0;
     int state = 0; // 0 code, 1 content, 2 final
@@ -140,6 +141,7 @@ int message(int socket_fd, char *code){
                 }
                 else if (c == ' '){
                     line[line_index++] = c;
+                    code[3] = '\0';
                     state = 2;
                 }
                 else code[code_index++] = c;
@@ -167,10 +169,31 @@ int message(int socket_fd, char *code){
                     memset(line, 0, sizeof line);
                     return 0;
                 }
+                else {
+                    line[line_index++] = c;
+                    break;
+                }
                 break;
         }
     }
     return -1;
+}
+
+int command(int socket_fd, char *command, char *content){
+    if (write(socket_fd, command, strlen(command)) < 0) return -1;
+    if (write(socket_fd, content, strlen(content)) < 0) return -1;
+    if (write(socket_fd, "\r\n", 2) < 0) return -1;
+    return 0;
+}
+
+int single_command(int socket_fd, char *command){
+    if (write(socket_fd, command, strlen(command)) < 0) return -1;
+    if (write(socket_fd, "\r\n", 2) < 0) return -1;
+    return 0;
+}
+
+int code(char *code, char *expected){
+    return strncmp(code, expected, strlen(expected));
 }
 
 int main(int argc, char **argv){
@@ -206,14 +229,46 @@ int main(int argc, char **argv){
     printf("Connecting to %s\n", ip_address);
 
     socket = socket_fd(ip_address, FTP_PORT);
-    printf("Socket File descriptor: %u\nAttempting Connection...\n\n", socket);
+    printf("Socket File descriptor: %u\n\nAttempting Connection...\n\n", socket);
 
-    char code[MAX_LEN];
-    if (message(socket, code) != 0){
+    char response_code[MAX_LEN];
+    if (message(socket, response_code) != 0){
         printf("Unable to connect to %s", ip_address);
         return -1;
     }
-    else printf("\nConnection Successful. Starting Authentication.\n");
+    else printf("\nConnection Successful.\nStarting Authentication.\n");
+
+    printf("Sending USER %s\n", url.username);
+    if(command(socket, "USER ", url.username) != 0
+        || message(socket, response_code) != 0
+        || code(response_code, "331") != 0){
+        printf("Could not send command. Aborting.\n");
+        return -1;
+    }
+
+    printf("Sending PASS %s\n", url.password);
+    if(command(socket, "PASS ", url.password) != 0
+        || message(socket, response_code) != 0
+        || code(response_code, "230") != 0){
+        printf("Could not send command. Aborting.\n");
+        return -1;
+    }
+
+    printf("Sending QUIT\n");
+    if(single_command(socket, "QUIT") != 0
+        || message(socket, response_code) != 0
+        || code(response_code, "221") != 0){
+        printf("Could not send command. Aborting.\n");
+        return -1;
+    }
+
+    printf("Closing socket %u\n", socket);
+    if (close(socket) != 0){
+        printf("Could not close socket.\n");
+        return -1;
+    }
+
+    printf("Socket closed. Protocol Complete.\n");
 
     return 0;
 }
