@@ -176,7 +176,6 @@ int message(int socket_fd, char *code, char *content){
                 break;
             case 2:
                 if (c == '\n'){
-                    printf("%s%s\n", code, line);
                     strncpy(content, line + 1, MAX_LEN-1);
                     memset(line, 0, sizeof line);
                     return 0;
@@ -232,8 +231,6 @@ int pasv_decode(int socket_fd, char *code, char *address, uint8_t port[2]){
             break;
         }
     }
-
-    printf("%s", line);
 
     strncpy(code, line, 3);
     code[3] = '\0';
@@ -310,7 +307,7 @@ int main(int argc, char **argv){
         close(socket);
         return -1;
     }
-    else printf("\nConnection Successful.\nStarting Authentication.\n");
+    else printf("\nConnection Successful.\nStarting Authentication.\n\n");
 
     printf("Sending USER %s\n", url.username);
     if(command(socket, "USER ", url.username) != 0
@@ -320,6 +317,7 @@ int main(int argc, char **argv){
         close_socket(socket);
         return -1;
     }
+    printf("> %s %s\n\n", response_code, content);
 
     printf("Sending PASS %s\n", url.password);
     if(command(socket, "PASS ", url.password) != 0
@@ -329,6 +327,7 @@ int main(int argc, char **argv){
         close_socket(socket);
         return -1;
     }
+    printf("> %s %s\n\n", response_code, content);
 
     printf("Sending TYPE I\n");
     if(single_command(socket, "TYPE I") !=0 
@@ -338,6 +337,7 @@ int main(int argc, char **argv){
         close_socket(socket);
         return -1;
     }
+    printf("> %s %s\n\n", response_code, content);
 
     printf("Sending SIZE %s\n", url.path);
     if(command(socket, "SIZE ", url.path) != 0
@@ -347,6 +347,7 @@ int main(int argc, char **argv){
         close_socket(socket);
         return -1;
     }
+    printf("> %s %s\n\n", response_code, content);
 
     long file_size = atol(content);
     printf("File Size: %ld bytes\n", file_size);
@@ -361,10 +362,7 @@ int main(int argc, char **argv){
         close_socket(socket);
         return -1;
     }
-
-    printf("Opening Data Socket: \n");
-    printf("IP Address: %s\n", address);
-    printf("PORT: %d\n", port[0]*256+port[1]);
+    printf("> %s %s\n\n", response_code, content);
 
     int data_socket = open_socket(address, port[0]*256+port[1]);
 
@@ -386,6 +384,7 @@ int main(int argc, char **argv){
         close_socket(socket);
         return -1;
     }
+    printf("> %s %s\n\n", response_code, content);
 
     while((bytes_read = read(data_socket, buffer, MAX_LEN)) > 0){
         if (write(file, buffer, bytes_read) < 0) {
@@ -394,13 +393,13 @@ int main(int argc, char **argv){
         }
 
         total += bytes_read;
-        printf("\rProgress: %d%%", (int)((total * 100) / file_size));
+        printf("\rProgress: %d%% (%zu / %ld)", (int)((total * 100) / file_size), total, file_size);
         fflush(stdout);
     }
-    printf("\n");
+    printf("\n\n");
     close(file);
 
-    printf("Transfer complete. Closing socket %d\n", socket);
+    printf("Transfer complete. Closing Data Socket %d\n", socket);
     close_socket(data_socket);
 
     if(message(socket, response_code, content) != 0
@@ -409,6 +408,7 @@ int main(int argc, char **argv){
         close_socket(socket);
         return -1;
     }
+    printf("> %s %s\n\n", response_code, content);
 
     printf("Sending QUIT\n");
     if(single_command(socket, "QUIT") != 0
@@ -418,8 +418,9 @@ int main(int argc, char **argv){
         close_socket(socket);
         return -1;
     }
+    printf("> %s %s\n\n", response_code, content);
 
-    printf("Closing socket %d\n", socket);
+    printf("Closing Control Socket %d\n", socket);
     close_socket(socket);
 
     printf("Socket closed. Protocol Complete.\n");
