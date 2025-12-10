@@ -7,10 +7,12 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <fcntl.h>
 
 
 #define FTP_PORT 21
 #define MAX_LEN 1024
+#define TRANSFER_LEN 2048
 
 typedef struct {
     char username[MAX_LEN+1];
@@ -130,7 +132,7 @@ int close_socket(const int socket_fd){
     return 0;
 }
 
-int message(int socket_fd, char *code){
+int message(int socket_fd, char *code, char *content){
     char c;
     char line[MAX_LEN];
     memset(line, 0, sizeof(line));
@@ -175,6 +177,7 @@ int message(int socket_fd, char *code){
             case 2:
                 if (c == '\n'){
                     printf("%s%s\n", code, line);
+                    strncpy(content, line + 1, MAX_LEN-1);
                     memset(line, 0, sizeof line);
                     return 0;
                 }
@@ -203,6 +206,49 @@ int message(int socket_fd, char *code){
                 }
         }
     }
+    return -1;
+}
+
+int pasv_decode(int socket_fd, char *code, char *address, uint8_t port[2]){
+    char c;
+    char line[MAX_LEN];
+    memset(line, 0, MAX_LEN);
+    int line_index = 0;
+
+    while (1){
+        ssize_t n = read(socket_fd, &c, 1);
+        if (n == 0) {
+            fprintf(stderr, "Connection closed by peer\n");
+            return -1;
+        } else if (n < 0) {
+            perror("read()");
+            return -1;
+        }
+
+        if (line_index < MAX_LEN - 1) line[line_index++] = c;
+
+        if (c == '\n') {
+            line[line_index] = '\0';
+            break;
+        }
+    }
+
+    printf("%s", line);
+
+    strncpy(code, line, 3);
+    code[3] = '\0';
+
+    int h1, h2, h3, h4, p1, p2;
+    if (sscanf(line, "%*d %*[^(](%d,%d,%d,%d,%d,%d)", &h1, &h2, &h3, &h4, &p1, &p2) == 6) {
+        sprintf(address, "%d.%d.%d.%d", h1, h2, h3, h4);
+        port[0] = p1;
+        port[1] = p2;
+        return 0;
+    } else {
+        fprintf(stderr, "Failed to parse PASV response\n");
+        return -1;
+    }
+
     return -1;
 }
 
@@ -258,8 +304,8 @@ int main(int argc, char **argv){
     socket = open_socket(ip_address, FTP_PORT);
     printf("Socket File descriptor: %d\n\nAttempting Connection...\n\n", socket);
 
-    char response_code[MAX_LEN];
-    if (message(socket, response_code) != 0){
+    char response_code[MAX_LEN], content[MAX_LEN];
+    if (message(socket, response_code, content) != 0){
         printf("Unable to connect to %s\n", ip_address);
         close(socket);
         return -1;
@@ -268,7 +314,7 @@ int main(int argc, char **argv){
 
     printf("Sending USER %s\n", url.username);
     if(command(socket, "USER ", url.username) != 0
-        || message(socket, response_code) != 0
+        || message(socket, response_code, content) != 0
         || check_response_code(response_code, "331") != 0){
         printf("Could not send command. Aborting.\n");
         close_socket(socket);
@@ -277,16 +323,96 @@ int main(int argc, char **argv){
 
     printf("Sending PASS %s\n", url.password);
     if(command(socket, "PASS ", url.password) != 0
-        || message(socket, response_code) != 0
+        || message(socket, response_code, content) != 0
         || check_response_code(response_code, "230") != 0){
         printf("Could not send command. Aborting.\n");
         close_socket(socket);
         return -1;
     }
 
+    printf("Sending TYPE I\n");
+    if(single_command(socket, "TYPE I") !=0 
+        || message(socket, response_code, content) != 0
+        || check_response_code(response_code, "200") != 0){
+        printf("Could not enter Binary mode. Aborting\n");
+        close_socket(socket);
+        return -1;
+    }
+
+    printf("Sending SIZE %s\n", url.path);
+    if(command(socket, "SIZE ", url.path) != 0
+        || message(socket, response_code, content) != 0
+        || check_response_code(response_code, "213") != 0){
+        printf("Could not send command. Aborting.\n");
+        close_socket(socket);
+        return -1;
+    }
+
+    long file_size = atol(content);
+    printf("File Size: %ld bytes\n", file_size);
+
+    char address[16];
+    uint8_t port[2];
+    printf("Sending PASV\n");
+    if(single_command(socket, "PASV") !=0 
+        || pasv_decode(socket, response_code, address, port) != 0
+        || check_response_code(response_code, "227") != 0){
+        printf("Could not enter Binary mode. Aborting\n");
+        close_socket(socket);
+        return -1;
+    }
+
+    printf("Opening Data Socket: \n");
+    printf("IP Address: %s\n", address);
+    printf("PORT: %d\n", port[0]*256+port[1]);
+
+    int data_socket = open_socket(address, port[0]*256+port[1]);
+
+    char *filename = strrchr(url.path, '/');
+    if (filename) filename++;
+    else filename = url.path;
+
+    int file = open(filename, O_WRONLY | O_CREAT, 0640);
+
+    uint8_t buffer[TRANSFER_LEN];
+    size_t bytes_read = 0, total = 0;
+
+    printf("Sending RETR %s\n", url.path);
+    if(command(socket, "RETR ", url.path) != 0
+        || message(socket, response_code, content) != 0
+        || (check_response_code(response_code, "150") != 0
+        && check_response_code(response_code, "125") != 0)){
+        printf("Could not send command. Aborting.\n");
+        close_socket(socket);
+        return -1;
+    }
+
+    while((bytes_read = read(data_socket, buffer, MAX_LEN)) > 0){
+        if (write(file, buffer, bytes_read) < 0) {
+            perror("write()");
+            break;
+        }
+
+        total += bytes_read;
+        printf("\rProgress: %d%%", (int)((total * 100) / file_size));
+        fflush(stdout);
+    }
+    printf("\n");
+    close(file);
+
+    printf("Transfer complete. Closing socket %d\n", socket);
+    close_socket(data_socket);
+
+    if(message(socket, response_code, content) != 0
+        || check_response_code(response_code, "226") != 0){
+        printf("Download Failed.\n");
+        close_socket(socket);
+        return -1;
+    }
+
     printf("Sending QUIT\n");
     if(single_command(socket, "QUIT") != 0
-        || message(socket, response_code) != 0
+        || message(socket, response_code, content) != 0
         || check_response_code(response_code, "221") != 0){
         printf("Could not send command. Aborting.\n");
         close_socket(socket);
