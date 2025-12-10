@@ -1,12 +1,12 @@
 #include <stdio.h>
 #include <string.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <ctype.h>
 
 
 #define FTP_PORT 21
@@ -99,7 +99,7 @@ int decode_rfc1738(char *ftp_link, Url *ftp_url){
     return 0;
 }
 
-int socket_fd(const char *address, uint16_t port){
+int open_socket(const char *address, uint16_t port){
     int socket_fd = -1;
     struct sockaddr_in server_addr;
 
@@ -122,47 +122,58 @@ int socket_fd(const char *address, uint16_t port){
     return socket_fd;
 }
 
+int close_socket(const int socket_fd){
+    if (close(socket_fd) < 0){
+        perror("close()");
+        exit(-1);
+    }
+    return 0;
+}
+
 int message(int socket_fd, char *code){
     char c;
     char line[MAX_LEN];
     memset(line, 0, sizeof(line));
     int code_index = 0;
     int line_index = 0;
-    int state = 0; // 0 code, 1 content, 2 final
+    int state = 0; // 0 code, 1 multi-line, 2 single-line, 3 escape
+    char first_code[4];
     
     while (1) {
-        read(socket_fd, &c, 1);
+        ssize_t n = read(socket_fd, &c, 1);
+        if (n == 0) {
+            fprintf(stderr, "Connection closed by peer\n");
+            return -1;
+        } else if (n < 0) {
+            perror("read()");
+            return -1;
+        }
 
         switch(state){
             case 0:
-                if (c == '-'){
-                    line[line_index++] = c;
+                if (code_index < 3) {
+                    code[code_index++] = c;
+                }
+                else if (c == '-'){
+                    if (line_index < MAX_LEN - 1) line[line_index++] = c;
+                    code[3] = '\0';
+                    strncpy(first_code, code, 4);
                     state = 1;
                 }
                 else if (c == ' '){
-                    line[line_index++] = c;
+                    if (line_index < MAX_LEN - 1) line[line_index++] = c;
                     code[3] = '\0';
                     state = 2;
                 }
-                else code[code_index++] = c;
                 break;
             case 1:
                 if (c == '\n'){
-                    printf("%s%s\n", code, line);
-
-                    memset(line, 0, sizeof(line));
-                    memset(code, 0, MAX_LEN);
-
-                    code_index = 0;
-                    line_index = 0;
-
-                    state = 0;
-                    break;
+                    state = 3;
                 }
                 else {
-                    line[line_index++] = c;
-                    break;
+                    if (line_index < MAX_LEN - 1) line[line_index++] = c;
                 }
+                break;
             case 2:
                 if (c == '\n'){
                     printf("%s%s\n", code, line);
@@ -170,10 +181,28 @@ int message(int socket_fd, char *code){
                     return 0;
                 }
                 else {
-                    line[line_index++] = c;
+                    if (line_index < MAX_LEN - 1) line[line_index++] = c;
                     break;
                 }
                 break;
+            case 3: 
+                if (isdigit(c)){
+                    printf("%s%s\n", code, line);
+
+                    memset(line, 0, sizeof(line));
+                    memset(code, 0, MAX_LEN);
+
+                    code_index = 1;
+                    line_index = 0;
+
+                    code[0] = c;
+
+                    state = 0;
+                }
+                else {
+                    if (line_index < MAX_LEN - 1) line[line_index++] = c;
+                    state = 1;
+                }
         }
     }
     return -1;
@@ -192,7 +221,7 @@ int single_command(int socket_fd, char *command){
     return 0;
 }
 
-int code(char *code, char *expected){
+int check_response_code(char *code, char *expected){
     return strncmp(code, expected, strlen(expected));
 }
 
@@ -205,7 +234,7 @@ int main(int argc, char **argv){
     Url url;
 
     if (decode_rfc1738(argv[1], &url) != 0){
-        printf("ERROR: Couldn't parse URL.");
+        printf("ERROR: Couldn't parse URL.\n");
         return -1;
     }
 
@@ -216,7 +245,7 @@ int main(int argc, char **argv){
 
     struct hostent *host = gethostbyname(url.domain);
     if (host == NULL){
-        printf("ERROR: Host could not be found.");
+        printf("ERROR: Host could not be found.\n");
         return -1;
     }
 
@@ -228,12 +257,13 @@ int main(int argc, char **argv){
     int socket;
     printf("Connecting to %s\n", ip_address);
 
-    socket = socket_fd(ip_address, FTP_PORT);
-    printf("Socket File descriptor: %u\n\nAttempting Connection...\n\n", socket);
+    socket = open_socket(ip_address, FTP_PORT);
+    printf("Socket File descriptor: %d\n\nAttempting Connection...\n\n", socket);
 
     char response_code[MAX_LEN];
     if (message(socket, response_code) != 0){
-        printf("Unable to connect to %s", ip_address);
+        printf("Unable to connect to %s\n", ip_address);
+        close(socket);
         return -1;
     }
     else printf("\nConnection Successful.\nStarting Authentication.\n");
@@ -241,32 +271,32 @@ int main(int argc, char **argv){
     printf("Sending USER %s\n", url.username);
     if(command(socket, "USER ", url.username) != 0
         || message(socket, response_code) != 0
-        || code(response_code, "331") != 0){
+        || check_response_code(response_code, "331") != 0){
         printf("Could not send command. Aborting.\n");
+        close_socket(socket);
         return -1;
     }
 
     printf("Sending PASS %s\n", url.password);
     if(command(socket, "PASS ", url.password) != 0
         || message(socket, response_code) != 0
-        || code(response_code, "230") != 0){
+        || check_response_code(response_code, "230") != 0){
         printf("Could not send command. Aborting.\n");
+        close_socket(socket);
         return -1;
     }
 
     printf("Sending QUIT\n");
     if(single_command(socket, "QUIT") != 0
         || message(socket, response_code) != 0
-        || code(response_code, "221") != 0){
+        || check_response_code(response_code, "221") != 0){
         printf("Could not send command. Aborting.\n");
+        close_socket(socket);
         return -1;
     }
 
-    printf("Closing socket %u\n", socket);
-    if (close(socket) != 0){
-        printf("Could not close socket.\n");
-        return -1;
-    }
+    printf("Closing socket %d\n", socket);
+    close_socket(socket);
 
     printf("Socket closed. Protocol Complete.\n");
 
