@@ -1,5 +1,13 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <ctype.h>
+
 
 #define FTP_PORT 21
 #define MAX_LEN 1024
@@ -12,7 +20,6 @@ typedef struct {
 } Url;
 
 // ftp://[<user>:<password>@]<host>/<url-path>
-
 int decode_rfc1738(char *ftp_link, Url *ftp_url){
     if(strlen(ftp_link) > MAX_LEN){
         printf("URL maximum size exceeded\n");
@@ -76,8 +83,8 @@ int decode_rfc1738(char *ftp_link, Url *ftp_url){
     char *first_slash = strchr(start, '/');
     char *end = strchr(start, '\0');
     if (first_slash && 
-        (first_slash-start > 0) 
-    ){
+        (first_slash-start > 0) )
+    {
         strncpy(ftp_url->domain, start, first_slash-start);
         strncpy(ftp_url->path, first_slash+1, end-first_slash);
 
@@ -89,12 +96,131 @@ int decode_rfc1738(char *ftp_link, Url *ftp_url){
         return -1;
     }
 
-    printf("Username: %s\n", ftp_url->username);
-    printf("Password: %s\n", ftp_url->password);
-    printf("Domain: %s\n", ftp_url->domain);
-    printf("Path: %s\n", ftp_url->path);
-
     return 0;
+}
+
+int open_socket(const char *address, uint16_t port){
+    int socket_fd = -1;
+    struct sockaddr_in server_addr;
+
+    bzero((char *) &server_addr, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = inet_addr(address); 
+    server_addr.sin_port = htons(port);      
+
+    if ((socket_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        perror("socket()");
+        exit(-1);
+    }
+    
+    if (connect(socket_fd, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
+        perror("connect()");
+        exit(-1);
+    }
+
+    printf("Connected to %s:%d\n", address, port);
+    return socket_fd;
+}
+
+int close_socket(const int socket_fd){
+    if (close(socket_fd) < 0){
+        perror("close()");
+        exit(-1);
+    }
+    return 0;
+}
+
+int message(int socket_fd, char *code){
+    char c;
+    char line[MAX_LEN];
+    memset(line, 0, sizeof(line));
+    int code_index = 0;
+    int line_index = 0;
+    int state = 0; // 0 code, 1 multi-line, 2 single-line, 3 escape
+    
+    while (1) {
+        ssize_t n = read(socket_fd, &c, 1);
+        if (n == 0) {
+            fprintf(stderr, "Connection closed by peer\n");
+            return -1;
+        } else if (n < 0) {
+            perror("read()");
+            return -1;
+        }
+
+        switch(state){
+            case 0:
+                if (code_index < 3) {
+                    code[code_index++] = c;
+                }
+                else if (c == '-'){
+                    if (line_index < MAX_LEN - 1) line[line_index++] = c;
+                    code[3] = '\0';
+                    state = 1;
+                }
+                else if (c == ' '){
+                    if (line_index < MAX_LEN - 1) line[line_index++] = c;
+                    code[3] = '\0';
+                    state = 2;
+                }
+                break;
+            case 1:
+                if (c == '\n'){
+                    state = 3;
+                }
+                else {
+                    if (line_index < MAX_LEN - 1) line[line_index++] = c;
+                }
+                break;
+            case 2:
+                if (c == '\n'){
+                    printf("%s%s\n", code, line);
+                    memset(line, 0, sizeof line);
+                    return 0;
+                }
+                else {
+                    if (line_index < MAX_LEN - 1) line[line_index++] = c;
+                    break;
+                }
+                break;
+            case 3: 
+                if (isdigit(c)){
+                    printf("%s%s\n", code, line);
+
+                    memset(line, 0, sizeof(line));
+                    memset(code, 0, MAX_LEN);
+
+                    code_index = 1;
+                    line_index = 0;
+
+                    code[0] = c;
+
+                    state = 0;
+                }
+                else {
+                    if (line_index < MAX_LEN - 1) line[line_index++] = c;
+                    state = 1;
+                }
+        }
+    }
+    return -1;
+}
+
+int command(int socket_fd, char *command, char *content){
+    if (write(socket_fd, command, strlen(command)) < 0) return -1;
+    if (write(socket_fd, content, strlen(content)) < 0) return -1;
+    if (write(socket_fd, "\r\n", 2) < 0) return -1;
+    return 0;
+}
+
+int single_command(int socket_fd, char *command){
+    if (write(socket_fd, command, strlen(command)) < 0) return -1;
+    if (write(socket_fd, "\r\n", 2) < 0) return -1;
+    return 0;
+}
+
+int check_response_code(char *code, char *expected){
+    return strncmp(code, expected, strlen(expected));
 }
 
 int main(int argc, char **argv){
@@ -106,9 +232,71 @@ int main(int argc, char **argv){
     Url url;
 
     if (decode_rfc1738(argv[1], &url) != 0){
-        printf("Couldn't parse URL.");
+        printf("ERROR: Couldn't parse URL.\n");
         return -1;
     }
+
+    printf("Username : %s\n", url.username);
+    printf("Password : %s\n", url.password);
+    printf("Domain   : %s\n", url.domain);
+    printf("Path     : %s\n", url.path);
+
+    struct hostent *host = gethostbyname(url.domain);
+    if (host == NULL){
+        printf("ERROR: Host could not be found.\n");
+        return -1;
+    }
+
+    const char *ip_address = inet_ntoa(*((struct in_addr *) host->h_addr));
+
+    printf("Host name  : %s\n", host->h_name);
+    printf("IP Address : %s\n", ip_address);
+
+    int socket;
+    printf("Connecting to %s\n", ip_address);
+
+    socket = open_socket(ip_address, FTP_PORT);
+    printf("Socket File descriptor: %d\n\nAttempting Connection...\n\n", socket);
+
+    char response_code[MAX_LEN];
+    if (message(socket, response_code) != 0){
+        printf("Unable to connect to %s\n", ip_address);
+        close(socket);
+        return -1;
+    }
+    else printf("\nConnection Successful.\nStarting Authentication.\n");
+
+    printf("Sending USER %s\n", url.username);
+    if(command(socket, "USER ", url.username) != 0
+        || message(socket, response_code) != 0
+        || check_response_code(response_code, "331") != 0){
+        printf("Could not send command. Aborting.\n");
+        close_socket(socket);
+        return -1;
+    }
+
+    printf("Sending PASS %s\n", url.password);
+    if(command(socket, "PASS ", url.password) != 0
+        || message(socket, response_code) != 0
+        || check_response_code(response_code, "230") != 0){
+        printf("Could not send command. Aborting.\n");
+        close_socket(socket);
+        return -1;
+    }
+
+    printf("Sending QUIT\n");
+    if(single_command(socket, "QUIT") != 0
+        || message(socket, response_code) != 0
+        || check_response_code(response_code, "221") != 0){
+        printf("Could not send command. Aborting.\n");
+        close_socket(socket);
+        return -1;
+    }
+
+    printf("Closing socket %d\n", socket);
+    close_socket(socket);
+
+    printf("Socket closed. Protocol Complete.\n");
 
     return 0;
 }
