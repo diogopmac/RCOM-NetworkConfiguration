@@ -137,7 +137,6 @@ int message(int socket_fd, char *code){
     int code_index = 0;
     int line_index = 0;
     int state = 0; // 0 code, 1 multi-line, 2 single-line, 3 escape
-    char first_code[4];
     
     while (1) {
         ssize_t n = read(socket_fd, &c, 1);
@@ -157,7 +156,6 @@ int message(int socket_fd, char *code){
                 else if (c == '-'){
                     if (line_index < MAX_LEN - 1) line[line_index++] = c;
                     code[3] = '\0';
-                    strncpy(first_code, code, 4);
                     state = 1;
                 }
                 else if (c == ' '){
