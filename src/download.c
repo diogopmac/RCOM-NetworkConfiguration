@@ -386,7 +386,7 @@ int main(int argc, char **argv){
     }
     printf("> %s %s\n\n", response_code, content);
 
-    while((bytes_read = read(data_socket, buffer, MAX_LEN)) > 0){
+    while((bytes_read = read(data_socket, buffer, TRANSFER_LEN)) > 0){
         if (write(file, buffer, bytes_read) < 0) {
             perror("write()");
             break;
