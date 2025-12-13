@@ -1,12 +1,12 @@
 CC = gcc
 CFLAGS = -Wall -Werror -pedantic
-ROOT = ..
-BIN = $(ROOT)/bin
+SRC = src
+BIN = bin
 
 all: download
 
-download: download.c bin
-	$(CC) $(CFLAGS) download.c -o $(BIN)/download
+download: $(SRC)/download.c bin
+	$(CC) $(CFLAGS) $(SRC)/download.c -o $(BIN)/download
 
 bin:
 	mkdir -p $(BIN)
