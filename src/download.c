@@ -138,6 +138,7 @@ int message(int socket_fd, char *code, char *content){
     memset(line, 0, sizeof(line));
     int code_index = 0;
     int line_index = 0;
+    int first_line = 1;
     int state = 0; // 0 code, 1 multi-line, 2 single-line, 3 escape
     
     while (1) {
@@ -168,6 +169,14 @@ int message(int socket_fd, char *code, char *content){
                 break;
             case 1:
                 if (c == '\n'){
+                    if (first_line){
+                        printf("> %s%s\n", code, line);
+                        first_line = 0;
+                    }
+                    else printf("> %s\n", line);
+                    
+                    memset(line, 0, sizeof(line));
+                    line_index = 0;
                     state = 3;
                 }
                 else {
@@ -187,8 +196,6 @@ int message(int socket_fd, char *code, char *content){
                 break;
             case 3: 
                 if (isdigit(c)){
-                    printf("%s%s\n", code, line);
-
                     memset(line, 0, sizeof(line));
                     memset(code, 0, MAX_LEN);
 
@@ -196,6 +203,7 @@ int message(int socket_fd, char *code, char *content){
                     line_index = 0;
 
                     code[0] = c;
+                    first_line = 1;
 
                     state = 0;
                 }
@@ -307,7 +315,12 @@ int main(int argc, char **argv){
         close(socket);
         return -1;
     }
-    else printf("\nConnection Successful.\nStarting Authentication.\n\n");
+    else {
+        printf("> %s %s\n\n", response_code, content);
+        printf("\nConnection Successful.\nStarting Authentication.\n\n");
+    } 
+    
+
 
     printf("Sending USER %s\n", url.username);
     if(command(socket, "USER ", url.username) != 0
