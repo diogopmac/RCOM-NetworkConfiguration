@@ -5,8 +5,8 @@ BIN = bin
 
 all: download
 
-download: $(SRC)/download.c bin
-	$(CC) $(CFLAGS) $(SRC)/download.c -o $(BIN)/download
+download: download.c bin
+	$(CC) $(CFLAGS) download.c -o $(BIN)/download
 
 bin:
 	mkdir -p $(BIN)
