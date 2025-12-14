@@ -1,6 +1,5 @@
 CC = gcc
 CFLAGS = -Wall -Werror -pedantic
-SRC = src
 BIN = bin
 
 all: download
