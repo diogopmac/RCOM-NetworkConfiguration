@@ -18,6 +18,13 @@ phases, ARQ and congestion control mechanism
     TCP connection varies along the time 
 
 # Complete configuration (Table 11)
+## Resetting the configurations
+### Router and Switch Console
+> MikroTik $ `/system reset-configuration`
+
+### On each PC
+> sudo service networking restart
+
 ## Physical Connections
 > Conect tux2 e1 to `ether8`
 >
